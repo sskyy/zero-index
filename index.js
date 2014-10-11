@@ -117,7 +117,6 @@ function generateBeforeUpdateCallback(indexName,nodeName, models) {
             return index.create(inputIndex).then(function (savedIndex) {
               //TODO provide config options to decide which field should be cached
 
-              //when using `category.id=2` from browser, waterline look for key name of 'category.id' to match query
               val[indexName][key] = _.pick(savedIndex, ['id', 'name'])
 
               return val
@@ -129,10 +128,6 @@ function generateBeforeUpdateCallback(indexName,nodeName, models) {
       }else{
         val[indexName][key] = _.pick(index, ['id', 'name'])
 
-        //to support query from browser.
-        //when using `category.id=2` from browser, waterline look for key name of 'category.id' to match query
-        val[indexName+'.id'] = index.id
-        //TODO update index.nodes
         return val
       }
     }).filter(q.isPromise) )
@@ -141,28 +136,53 @@ function generateBeforeUpdateCallback(indexName,nodeName, models) {
 
 function generateBeforeModelFindHandler( indexName, nodeName, models){
   return {
-    "function": function convertQueryWithDotToObject( val ){
-      _.forEach(val, function( v, k){
-        if( (new RegExp("^"+indexName+"\\.")).test(k) ){
-          console.log("has dot",indexName,k)
-          var obj = {}, i= obj,stack = k.split("."),n
-          while( n = stack.shift() ){
-            if( stack.length !== 0){
-              i[n] = {}
-              i= i[n]
-            }else{
-              i[n] = v
-            }
-          }
-          _.extend(val,obj)
-          delete val[k]
-        }else{
-          val[k] = v
-        }
+    "function": function replaceTagWithNodeIds( val ){
+      //TODO change find critia
+      var tagKey,tagVal
+      if( !val[indexName]) return
+
+      tagKey = Object.keys( val[indexName]).pop()
+      tagVal = val[indexName][tagKey].split(",")
+      var critia = {where:{}}
+      critia.where[tagKey] = tagVal
+      var replacePromise = models[indexName].find(critia).then(function( indexes ){
+        var nodeIds =[]
+        _.forEach( indexes, function( index ){
+          if( index.nodes[nodeName] )
+            nodeIds = nodeIds.concat( Object.keys(index.nodes[nodeName]) )
+        })
+        nodeIds = _.uniq( nodeIds )
+
+        console.log("find ===nodeIds",nodeIds)
+        val.id = nodeIds
+        delete val[indexName]
       })
+
+      replacePromise.block = true
+      return replacePromise
     },
     "first" : true
   }
+}
+
+function hierarchyObject(val){
+  var output = _.cloneDeep( val )
+  _.forEach(output, function( v, k){
+    console.log("has dot",k,k)
+    if( k.indexOf(".")>0 ){
+      var i= output,stack = k.split("."),n
+      while( n = stack.shift() ){
+        if( stack.length !== 0){
+          i[n] = i[n] || {}
+          i= i[n]
+        }else{
+          i[n] = v
+        }
+      }
+      delete output[k]
+    }
+  })
+  return output
 }
 
 
