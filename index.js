@@ -1,5 +1,9 @@
 var _ = require('lodash'),
-  q = require('q')
+  Promise = require('bluebird')
+
+function isPromiseAlike( obj ){
+  return _.isObject(obj) && _.isFunction(obj.then) && _.isFunction(obj.catch)
+}
 
 var nodes = {},
   indexes = {}
@@ -13,7 +17,7 @@ function generateBeforeCreateCallback(indexName, nodeName, models) {
 //      if( indexes[indexName].config.limit ){}
 
     var index = models[indexName]
-    return q.all( val[indexName].map(function ( inputIndex , key) {
+    return Promise.all( val[indexName].map(function ( inputIndex , key) {
 
       //may need to build index
       if (!inputIndex.id) {
@@ -51,7 +55,7 @@ function generateBeforeCreateCallback(indexName, nodeName, models) {
         val[indexName+'.id'] = index.id
         return val
       }
-    }).filter(q.isPromise))
+    }).filter( isPromiseAlike ))
   }
 }
 
@@ -62,7 +66,7 @@ function generateAfterCreateCallback(indexName, nodeName, models) {
 
     if (!val[indexName]) return
     var index = models[indexName]
-    return q.all( val[indexName].map(function ( inputIndex, key) {
+    return Promise.all( val[indexName].map(function ( inputIndex, key) {
       //need to push nodes
       return index.findOne( inputIndex.id).then(function( foundIndex){
         var nodes = foundIndex.nodes || {}
@@ -73,7 +77,7 @@ function generateAfterCreateCallback(indexName, nodeName, models) {
 
         return index.update(foundIndex.id, {nodes: nodes})
       })
-    }).filter(q.isPromise))
+    }).filter( isPromiseAlike))
   }
 }
 
@@ -86,7 +90,7 @@ function generateBeforeUpdateCallback(indexName,nodeName, models) {
     //TODO: validation
 //      if( indexes[indexName].config.limit ){}
     var index = models[indexName]
-    return q.all( val[indexName].map(function (inputIndex, key) {
+    return Promise.all( val[indexName].map(function (inputIndex, key) {
 
 
       //may need to build index
@@ -130,7 +134,7 @@ function generateBeforeUpdateCallback(indexName,nodeName, models) {
 
         return val
       }
-    }).filter(q.isPromise) )
+    }).filter( isPromiseAlike) )
   }
 }
 
@@ -223,3 +227,4 @@ module.exports = {
 
   }
 }
+
