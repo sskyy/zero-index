@@ -122,7 +122,7 @@ function generateBeforeUpdateCallback(indexName,nodeName, models) {
               return val
             })
           }
-        }).fail(function(err){
+        }).catch(function(err){
           ZERO.error( err)
         })
       }else{
