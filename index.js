@@ -10,17 +10,18 @@ var nodes = {},
 
 function generateBeforeCreateCallback(indexName, nodeName, models) {
   return function handlerIndexBeforeNodeCreate(val) {
+    console.log("calling from handlerIndexBeforeNodeCreate", val, indexName)
 
     if (!val[indexName]) return
 
-    //TODO: validation
-//      if( indexes[indexName].config.limit ){}
 
     var index = models[indexName]
     return Promise.all( val[indexName].map(function ( inputIndex , key) {
 
+      if( !_.isObject(inputIndex)) return
+
       //may need to build index
-      if (!inputIndex.id) {
+      if ( !inputIndex.id) {
         //same name check
         ZERO.mlog("index"," may create new ", inputIndex.name)
         return index.findOne({name: inputIndex.name}).then(function (i) {
@@ -64,7 +65,7 @@ function generateAfterCreateCallback(indexName, nodeName, models) {
   return function handlerIndexAfterNodeCreate(val) {
     ZERO.mlog( "index"," after create node")
 
-    if (!val[indexName]) return
+    if ( !val[indexName]) return
     var index = models[indexName]
     return Promise.all( val[indexName].map(function ( inputIndex, key) {
       //need to push nodes
@@ -92,9 +93,10 @@ function generateBeforeUpdateCallback(indexName,nodeName, models) {
     var index = models[indexName]
     return Promise.all( val[indexName].map(function (inputIndex, key) {
 
+      if( !_.isObject(inputIndex)) return
 
       //may need to build index
-      if (!inputIndex.id) {
+      if ( !inputIndex.id) {
         //same name check
         return index.findOne({name: inputIndex.name}).then(function (foundIndex) {
           if (foundIndex) {
@@ -190,18 +192,9 @@ function hierarchyObject(val){
 }
 
 
-function setListener( root, indexName, nodeName, models){
-  root.listen = root.listen || {}
-  root.listen[nodeName + '.create.before'] = generateBeforeCreateCallback(indexName, nodeName, models)
-  root.listen[nodeName + '.create.after'] = generateAfterCreateCallback(indexName,nodeName ,models)
-  root.listen[nodeName + '.update.before']= generateBeforeUpdateCallback(indexName,nodeName, models)
-
-  //before find
-  root.listen[nodeName+'.find'] = generateBeforeModelFindHandler( indexName, nodeName, models)
-}
-
 module.exports = {
   indexes : {},
+  listen : {},
   expand : function( module ){
     var root = this
     if( module.models ){
@@ -217,12 +210,15 @@ module.exports = {
 
     _.forEach(root.dep.model.models, function(node, nodeName){
       if( node.isNode ){
+
         _.forEach( root.indexes , function( attributes, indexName ){
-          setListener( root, indexName, nodeName, root.dep.model.models )
+          root.dep.bus.on(nodeName + '.create.before',generateBeforeCreateCallback(indexName, nodeName, root.dep.model.models ))
+          root.dep.bus.on(nodeName + '.create.after',generateAfterCreateCallback(indexName,nodeName ,root.dep.model.models ))
+          root.dep.bus.on(nodeName + '.update.before',generateBeforeUpdateCallback(indexName,nodeName, root.dep.model.models ))
+          root.dep.bus.on(nodeName + '.find',generateBeforeModelFindHandler( indexName, nodeName, root.dep.model.models ))
         })
       }
     })
-    root.dep.bus.expand(root)
 
   }
 }
