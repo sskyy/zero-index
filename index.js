@@ -10,7 +10,6 @@ var nodes = {},
 
 function generateBeforeCreateCallback(indexName, nodeName, models) {
   return function handlerIndexBeforeNodeCreate(val) {
-    console.log("calling from handlerIndexBeforeNodeCreate", val, indexName)
 
     if (!val[indexName]) return
 
@@ -159,7 +158,6 @@ function generateBeforeModelFindHandler( indexName, nodeName, models){
         })
         nodeIds = _.uniq( nodeIds )
 
-        console.log("find ===nodeIds",nodeIds)
         val.id = nodeIds
         delete val[indexName]
       })
