@@ -197,8 +197,8 @@ module.exports = {
     var root = this
     if( module.models ){
       module.models.forEach(function( model ){
-        if( model.isIndex ){
-          root.indexes[model.identity] = model.attributes
+        if( model.index ){
+          root.indexes[model.identity] = model.index
         }
       })
     }
@@ -211,9 +211,6 @@ module.exports = {
 
         _.forEach( root.indexes , function( attributes, indexName ){
           root.dep.bus.on(nodeName + '.create.before',generateBeforeCreateCallback(indexName, nodeName, root.dep.model.models ))
-          root.dep.bus.on(nodeName + '.create.after',generateAfterCreateCallback(indexName,nodeName ,root.dep.model.models ))
-          root.dep.bus.on(nodeName + '.update.before',generateBeforeUpdateCallback(indexName,nodeName, root.dep.model.models ))
-          root.dep.bus.on(nodeName + '.find',generateBeforeModelFindHandler( indexName, nodeName, root.dep.model.models ))
         })
       }
     })
